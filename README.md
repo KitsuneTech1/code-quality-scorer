@@ -1,137 +1,89 @@
 # code-quality-scorer
 
-Score a code repository on tests, documentation, dependencies, and size with a deterministic weighted ranking you can audit.
+Score a code repository on tests, documentation, dependency files, and source size. The result is deterministic, uses four equal weights, and includes the detail behind each score.
 
 ## What it does
 
-Examines a repository and scores it on four dimensions:
+The scorer returns a total from 0 to 100:
 
-- Tests: 0-25 points based on test file count and presence
-- Documentation: 0-25 points for README, docs/, and docstrings
-- Dependencies: 0-25 points for dependency declaration and lock files
-- Size: 0-25 points, favoring small focused projects over large monoliths
+- Tests: 25% of the total
+- Documentation: 25%
+- Dependencies: 25%
+- Size: 25%
 
-Total score ranges from 0-100. No machine learning, no hidden heuristics, just auditable metrics.
+It uses only the Python standard library. It does not make model calls or network requests.
 
 ## Installation
 
-```bash
-pip install -e .
-```
-
-Or run directly:
+There is nothing to install. Run the script with Python 3.8 or newer:
 
 ```bash
-python score_repo.py <repo_path> [options]
+python score_repo.py <repo_path> [--format text|json]
 ```
 
 ## Usage
 
-### Basic usage
-
-Score a repository:
+Human-readable output is the default:
 
 ```bash
 python score_repo.py /path/to/repo
 ```
 
-Output:
-
-```
-Repository Quality Score: 78/100
-
-Tests           23/25  15 test files
-Documentation   18/25  README.md, docs/ (4 files), docstrings (12 found)
-Dependencies    20/25  pyproject.toml, poetry.lock
-Size            17/25  2341 lines (12 files)
-
-Interpretation:
-  Good: solid foundation with room for improvement.
-```
-
-### Output formats
-
-Text (default):
-
-```bash
-python score_repo.py /path/to/repo --format text
-```
-
-JSON:
+Use JSON for scripts:
 
 ```bash
 python score_repo.py /path/to/repo --format json
 ```
 
-JSON output:
+Each result contains `total` and a `breakdown` with `score`, `max`, and `detail` for all four dimensions. A category score is never higher than 25, so the total is the sum of the four category scores.
 
-```json
-{
-  "total": 78,
-  "breakdown": {
-    "tests": {
-      "score": 23,
-      "max": 25,
-      "detail": "15 test files"
-    },
-    "documentation": {
-      "score": 18,
-      "max": 25,
-      "detail": "README.md, docs/"
-    },
-    "dependencies": {
-      "score": 20,
-      "max": 25,
-      "detail": "pyproject.toml, poetry.lock"
-    },
-    "size": {
-      "score": 17,
-      "max": 25,
-      "detail": "2341 lines (12 files)"
-    }
-  }
-}
-```
+## Scoring rules
 
-## Scoring interpretation
+The scanner ignores hidden paths and these common generated or dependency directories: `.git`, `.hg`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache`, `.svn`, `.tox`, `__pycache__`, `build`, `dist`, `node_modules`, `site-packages`, `.venv`, and `venv`. Symlinks are ignored.
 
-- 90-100: Excellent. Well-tested, documented, and focused.
-- 75-89: Good. Solid foundation with room for improvement.
-- 60-74: Fair. Basic quality practices in place.
-- 40-59: Needs work. Consider improving test coverage and docs.
-- Below 40: Early stage. Focus on adding tests and documentation.
+### Tests
 
-## Metrics details
-
-### Tests (0-25)
+Test files are regular files with a supported test naming convention. The scorer recognizes files inside `test`, `tests`, `spec`, or `specs` directories, plus names such as `test_*.py`, `*_test.py`, `*.test.js`, and `*.spec.js`. The score is based on the number of files:
 
 - 0 files: 0 points
-- 1-2 files: 10 points
-- 3-9 files: 18 points
-- 10+ files: 25 points
+- 1 or 2 files: 10 points
+- 3 to 9 files: 18 points
+- 10 or more files: 25 points
 
-### Documentation (0-25)
+This counts test files. It does not measure test coverage or run the tests.
 
-- README.md: 10 points
-- Alternative README format: 7 points
-- docs/ directory: up to 10 points based on file count
-- Docstrings: up to 5 points based on count
+### Documentation
 
-### Dependencies (0-25)
+- Root `README.md`: 10 points
+- Root `README`, `README.txt`, or `README.rst`: 7 points when `README.md` is absent
+- Files below `docs/`: 2 points per file, up to 10 points
+- Python module, class, and function docstrings: 1 point each, up to 5 points
 
-Awarded for presence of:
-- pyproject.toml (8) or requirements.txt (5) or setup.py (3)
-- poetry.lock (5)
-- package.json (5) or package-lock.json/yarn.lock (5)
-- Cargo.toml (8) or Cargo.lock (5)
+Python files that cannot be parsed are skipped for the docstring count.
 
-### Size (0-25)
+### Dependencies
 
-- < 500 lines: 25 points (tight focus)
-- 500-2000 lines: 20 points
-- 2000-5000 lines: 15 points
-- 5000-10000 lines: 10 points
-- 10000+ lines: 5 points
+The scorer checks for common manifests and matching lock files. It checks file presence, not the contents or freshness of a dependency list.
+
+- `pyproject.toml`: 8 points, otherwise `requirements.txt`: 5, otherwise `setup.py`: 3
+- `poetry.lock` with a Python manifest: 5 points
+- `package.json`: 5 points
+- `package-lock.json` or `yarn.lock` with `package.json`: 5 points
+- `Cargo.toml`: 8 points
+- `Cargo.lock` with `Cargo.toml`: 5 points
+
+The category is capped at 25 points. A lock file without its matching manifest does not receive a lock-file bonus.
+
+### Size
+
+Size counts lines in visible files with these extensions: `.py`, `.js`, `.rs`, `.go`, `.java`, and `.cs`.
+
+- Under 500 lines: 25 points
+- 500 to 1,999 lines: 20 points
+- 2,000 to 4,999 lines: 15 points
+- 5,000 to 9,999 lines: 10 points
+- 10,000 or more lines: 5 points
+- No supported source files: 0 points
 
 ## Testing
 
