@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Tests for code-quality-scorer."""
 
+import os
+import json
 import shutil
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -55,6 +59,23 @@ class TestScoreRepo(unittest.TestCase):
         self.assertNotIn(".env", counts)
         self.assertEqual(counts[".py"], 3)
         self.assertEqual(score_repo.score_size(self.repo_path)[0], 25)
+
+    def test_root_symlinks_are_ignored(self):
+        (self.repo_path / "README.md").unlink()
+        (self.repo_path / "requirements.txt").unlink()
+        (self.repo_path / "README-target").write_text("# Target\n")
+        (self.repo_path / "requirements-target").write_text("requests==2.28.0\n")
+        try:
+            os.symlink("README-target", self.repo_path / "README.md")
+            os.symlink("requirements-target", self.repo_path / "requirements.txt")
+        except (NotImplementedError, OSError) as error:
+            self.skipTest(f"symlinks unavailable: {error}")
+
+        documentation_score, documentation_detail = score_repo.score_documentation(self.repo_path)
+        dependency_score, dependency_detail = score_repo.score_dependencies(self.repo_path)
+        self.assertNotIn("README.md", documentation_detail)
+        self.assertEqual(documentation_score, 5)
+        self.assertEqual((dependency_score, dependency_detail), (0, "no dependency files"))
 
     def test_score_tests_uses_test_conventions_not_substrings(self):
         (self.repo_path / "contest.py").write_text("print('not a test')\n")
@@ -134,6 +155,23 @@ class TestScoreRepo(unittest.TestCase):
     def test_score_repository_rejects_non_directory(self):
         with self.assertRaises(ValueError):
             score_repo.score_repository(self.repo_path / "missing")
+
+    def test_cli_returns_json_for_repository(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).parent / "score_repo.py"),
+                str(self.repo_path),
+                "--format",
+                "json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["total"], 55)
+        self.assertEqual(result["breakdown"]["tests"]["detail"], "1 test file")
 
 
 if __name__ == "__main__":
