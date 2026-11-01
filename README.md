@@ -1,47 +1,42 @@
 <p align="center"><a href="https://kitsunetechnologies.org/work"><img src="https://raw.githubusercontent.com/KitsuneTech1/.github/main/assets/kitsune-banner.svg" alt="Built by Kitsune Technologies" width="760"></a></p>
 
-# code-quality-scorer
+# Repo Grade
 
-Score a code repository on tests, documentation, dependency files, and source size. The result is deterministic, uses four equal weights, and includes the detail behind each score.
+Score a code repository on tests, documentation, dependency files, and source size.
 
-## What it does
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 
-The scorer returns a total from 0 to 100:
+The result is deterministic, weighted equally across four dimensions, and includes detail for each score.
 
-- Tests: 25% of the total
-- Documentation: 25%
-- Dependencies: 25%
-- Size: 25%
+## Quick start
 
-It uses only the Python standard library. It does not make model calls or network requests.
-
-## Installation
-
-There is nothing to install. Run the script with Python 3.8 or newer:
-
-```bash
-python score_repo.py <repo_path> [--format text|json]
-```
-
-## Usage
-
-Human-readable output is the default:
+Nothing to install. Python 3.8 or newer is the only requirement:
 
 ```bash
 python score_repo.py /path/to/repo
 ```
 
-Use JSON for scripts:
+For JSON output in scripts:
 
 ```bash
 python score_repo.py /path/to/repo --format json
 ```
 
-Each result contains `total` and a `breakdown` with `score`, `max`, and `detail` for all four dimensions. A category score is never higher than 25, so the total is the sum of the four category scores.
+Each result shows the total from 0 to 100, plus a breakdown with `score`, `max`, and `detail` for Tests, Documentation, Dependencies, and Size. Each category is worth 25 points, so the total is their sum.
 
-## Scoring rules
+## How it works
 
-The scanner ignores hidden paths and these common generated or dependency directories: `.git`, `.hg`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache`, `.svn`, `.tox`, `__pycache__`, `build`, `dist`, `node_modules`, `site-packages`, `.venv`, and `venv`. Symlinks are ignored.
+Uses only Python's standard library. No external calls or network requests.
+
+Scores on four equal dimensions:
+
+- **Tests**: 25% - counts test files, does not measure coverage
+- **Documentation**: 25% - README, docs/, and docstrings
+- **Dependencies**: 25% - manifest and lock file presence
+- **Size**: 25% - lines of code in supported languages
+
+The scanner ignores hidden paths and standard generated directories: `.git`, `.hg`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache`, `.svn`, `.tox`, `__pycache__`, `build`, `dist`, `node_modules`, `site-packages`, `.venv`, and `venv`. Symlinks are ignored.
 
 ### Tests
 
