@@ -8,6 +8,7 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import score_repo
 
@@ -59,6 +60,26 @@ class TestScoreRepo(unittest.TestCase):
         self.assertNotIn(".env", counts)
         self.assertEqual(counts[".py"], 3)
         self.assertEqual(score_repo.score_size(self.repo_path)[0], 25)
+
+    def test_symlinked_directories_are_ignored(self):
+        external_path = self.repo_path.parent / f".review-external-{id(self)}"
+        external_path.mkdir()
+        try:
+            (external_path / "escaped.py").write_text("x\n" * 1000)
+            link = self.repo_path / "linked-source"
+            try:
+                link.symlink_to(external_path, target_is_directory=True)
+            except (NotImplementedError, OSError) as error:
+                self.skipTest(f"directory symlinks unavailable: {error}")
+
+            counts = score_repo.count_files_by_type(self.repo_path)
+            self.assertEqual(counts[".py"], 3)
+            self.assertEqual(score_repo.score_size(self.repo_path)[0], 25)
+        finally:
+            if (self.repo_path / "linked-source").is_symlink():
+                (self.repo_path / "linked-source").unlink()
+            (external_path / "escaped.py").unlink(missing_ok=True)
+            external_path.rmdir()
 
     def test_root_symlinks_are_ignored(self):
         (self.repo_path / "README.md").unlink()
@@ -140,6 +161,35 @@ class TestScoreRepo(unittest.TestCase):
         score, detail = score_repo.score_size(self.repo_path)
         self.assertEqual(score, 25)
         self.assertIn("4 files", detail)
+
+    def test_score_size_skips_unreadable_source_files(self):
+        with patch.object(Path, "read_text", side_effect=OSError("unreadable")):
+            score, detail = score_repo.score_size(self.repo_path)
+
+        self.assertEqual((score, detail), (0, "no source code"))
+
+    def test_score_size_thresholds(self):
+        size_repo = self.repo_path / "size-fixture"
+        size_repo.mkdir()
+        source_file = size_repo / "source.py"
+        cases = (
+            (499, 25),
+            (500, 20),
+            (1999, 20),
+            (2000, 15),
+            (4999, 15),
+            (5000, 10),
+            (9999, 10),
+            (10000, 5),
+        )
+
+        for line_count, expected_score in cases:
+            with self.subTest(line_count=line_count):
+                source_file.write_text("x\n" * line_count)
+                self.assertEqual(
+                    score_repo.score_size(size_repo),
+                    (expected_score, f"{line_count} lines (1 files)"),
+                )
 
     def test_score_repository_is_deterministic_and_bounded(self):
         first = score_repo.score_repository(self.repo_path)

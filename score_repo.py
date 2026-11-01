@@ -3,6 +3,7 @@
 
 import ast
 import json
+import os
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -40,10 +41,18 @@ def _is_ignored(path, repo_path):
 def _iter_files(repo_path):
     """Yield regular, visible repository files in a stable order."""
     repo_path = Path(repo_path)
-    paths = sorted(repo_path.rglob("*"), key=lambda item: (item.as_posix().lower(), item.as_posix()))
-    for path in paths:
-        if path.is_file() and not path.is_symlink() and not _is_ignored(path, repo_path):
-            yield path
+    for root, directories, filenames in os.walk(repo_path, topdown=True, followlinks=False):
+        root_path = Path(root)
+        directories[:] = sorted(
+            name
+            for name in directories
+            if not (root_path / name).is_symlink()
+            and not _is_ignored(root_path / name, repo_path)
+        )
+        for name in sorted(filenames, key=lambda item: (item.lower(), item)):
+            path = root_path / name
+            if path.is_file() and not path.is_symlink() and not _is_ignored(path, repo_path):
+                yield path
 
 
 def _root_file(repo_path, *names):
@@ -207,11 +216,12 @@ def score_size(repo_path):
     for item in _iter_files(Path(repo_path)):
         if item.suffix.lower() not in SOURCE_SUFFIXES:
             continue
-        source_files += 1
         try:
-            total_lines += len(item.read_text(encoding="utf-8", errors="ignore").splitlines())
+            line_count = len(item.read_text(encoding="utf-8", errors="ignore").splitlines())
         except OSError:
             continue
+        source_files += 1
+        total_lines += line_count
 
     if source_files == 0:
         return 0, "no source code"
