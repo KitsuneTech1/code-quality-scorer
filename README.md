@@ -1,3 +1,5 @@
+<p align="center"><a href="https://kitsunetechnologies.org/work"><img src="https://raw.githubusercontent.com/KitsuneTech1/.github/main/assets/kitsune-banner.svg" alt="Built by Kitsune Technologies" width="760"></a></p>
+
 # code-quality-scorer
 
 Score a code repository on tests, documentation, dependency files, and source size. The result is deterministic, uses four equal weights, and includes the detail behind each score.
@@ -93,6 +95,8 @@ python -m unittest test_score_repo
 
 ## License
 
-MIT License
+MIT. Copyright (c) 2026 Kitsune Technologies LLC. Do what you like with it, commercially or otherwise, just keep the copyright notice. Full text in [LICENSE](LICENSE).
 
-Copyright (c) 2026 KitsuneTech1
+---
+
+<p align="center"><sub>Part of <b>Buildtober 2026</b>: 31 open source projects in 31 days. Built by <a href="https://kitsunetechnologies.org/work">Kitsune Technologies</a>. More at <a href="https://github.com/KitsuneTech1">github.com/KitsuneTech1</a>.</sub></p>
