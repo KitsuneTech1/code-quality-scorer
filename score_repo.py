@@ -50,7 +50,7 @@ def _root_file(repo_path, *names):
     """Find a named file at the repository root, case-insensitively."""
     wanted = {name.lower() for name in names}
     for path in sorted(Path(repo_path).iterdir(), key=lambda item: item.name.lower()):
-        if path.is_file() and path.name.lower() in wanted:
+        if not path.is_symlink() and path.is_file() and path.name.lower() in wanted:
             return path
     return None
 
