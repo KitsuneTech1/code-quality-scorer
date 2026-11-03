@@ -4,10 +4,22 @@
 
 Score a code repository on tests, documentation, dependency files, and source size.
 
+[![Build Status](https://github.com/KitsuneTech1/code-quality-scorer/actions/workflows/ci.yml/badge.svg)](https://github.com/KitsuneTech1/code-quality-scorer/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 
 The result is deterministic, weighted equally across four dimensions, and includes detail for each score.
+
+
+## Architecture & Data Flow
+
+```mermaid
+flowchart TD
+    A[Target Repository Directory] --> B[Static Analyzer: Tests, Docs, Size, Deps]
+    B --> C[Deterministic Metric Weighing Engine]
+    C --> D[Penalty & Bonus Calculations]
+    D --> E[Grade Breakdown & Quality Score 0-100]
+```
 
 ## Quick start
 
